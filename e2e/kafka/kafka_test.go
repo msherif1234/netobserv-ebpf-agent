@@ -10,6 +10,7 @@ import (
 
 	"github.com/netobserv/netobserv-ebpf-agent/e2e/basic"
 	"github.com/netobserv/netobserv-ebpf-agent/e2e/cluster"
+
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
