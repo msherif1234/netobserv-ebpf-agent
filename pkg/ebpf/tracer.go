@@ -39,9 +39,11 @@ const (
 	constEnableRtt           = "enable_rtt"
 	constEnableDNSTracking   = "enable_dns_tracking"
 	constEnableFlowFiltering = "enable_flows_filtering"
+	constEnableOvsMonitoring = "enable_ovs_monitoring"
 	pktDropHook              = "kfree_skb"
 	constPcaEnable           = "enable_pca"
 	pcaRecordsMap            = "packet_record"
+	ovsMonitoringHook        = "psample_sample_packet"
 )
 
 var log = logrus.WithField("component", "ebpf.FlowFetcher")
@@ -65,23 +67,26 @@ type FlowFetcher struct {
 	rttKprobeLink            link.Link
 	egressTCXLink            map[ifaces.Interface]link.Link
 	ingressTCXLink           map[ifaces.Interface]link.Link
+	ovsMonitoringLink        link.Link
 	lookupAndDeleteSupported bool
 }
 
 type FlowFetcherConfig struct {
-	EnableIngress    bool
-	EnableEgress     bool
-	Debug            bool
-	Sampling         int
-	CacheMaxSize     int
-	PktDrops         bool
-	DNSTracker       bool
-	EnableRTT        bool
-	EnableFlowFilter bool
-	EnablePCA        bool
-	FilterConfig     *FilterConfig
+	EnableIngress       bool
+	EnableEgress        bool
+	Debug               bool
+	Sampling            int
+	CacheMaxSize        int
+	PktDrops            bool
+	DNSTracker          bool
+	EnableRTT           bool
+	EnableOVSMonitoring bool
+	EnableFlowFilter    bool
+	EnablePCA           bool
+	FilterConfig        *FilterConfig
 }
 
+// nolint:golint,cyclop
 func NewFlowFetcher(cfg *FlowFetcherConfig) (*FlowFetcher, error) {
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.WithError(err).
@@ -119,6 +124,10 @@ func NewFlowFetcher(cfg *FlowFetcherConfig) (*FlowFetcher, error) {
 	if cfg.EnableFlowFilter {
 		enableFlowFiltering = 1
 	}
+	enableOvsMonitoring := 0
+	if cfg.EnableOVSMonitoring {
+		enableOvsMonitoring = 1
+	}
 
 	if err := spec.RewriteConstants(map[string]interface{}{
 		constSampling:            uint32(cfg.Sampling),
@@ -126,6 +135,7 @@ func NewFlowFetcher(cfg *FlowFetcherConfig) (*FlowFetcher, error) {
 		constEnableRtt:           uint8(enableRtt),
 		constEnableDNSTracking:   uint8(enableDNSTracking),
 		constEnableFlowFiltering: uint8(enableFlowFiltering),
+		constEnableOvsMonitoring: uint8(enableOvsMonitoring),
 	}); err != nil {
 		return nil, fmt.Errorf("rewriting BPF constants definition: %w", err)
 	}
@@ -160,6 +170,14 @@ func NewFlowFetcher(cfg *FlowFetcherConfig) (*FlowFetcher, error) {
 		pktDropsLink, err = link.Tracepoint("skb", pktDropHook, objects.KfreeSkb, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to attach the BPF program to kfree_skb tracepoint: %w", err)
+		}
+	}
+
+	var ovsMonitoringLink link.Link
+	if cfg.EnableOVSMonitoring && !oldKernel {
+		ovsMonitoringLink, err = link.Kprobe(ovsMonitoringHook, objects.OvsDpMonitor, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to attach the BPF program to openvswitch kprobe: %w", err)
 		}
 	}
 
@@ -198,6 +216,7 @@ func NewFlowFetcher(cfg *FlowFetcherConfig) (*FlowFetcher, error) {
 		rttKprobeLink:            rttKprobeLink,
 		egressTCXLink:            map[ifaces.Interface]link.Link{},
 		ingressTCXLink:           map[ifaces.Interface]link.Link{},
+		ovsMonitoringLink:        ovsMonitoringLink,
 		lookupAndDeleteSupported: true, // this will be turned off later if found to be not supported
 	}, nil
 }
@@ -381,6 +400,11 @@ func (m *FlowFetcher) Close() error {
 	}
 	if m.rttKprobeLink != nil {
 		if err := m.rttKprobeLink.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if m.ovsMonitoringLink != nil {
+		if err := m.ovsMonitoringLink.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -658,6 +682,7 @@ func kernelSpecificLoadAndAssign(oldKernel bool, spec *ebpf.CollectionSpec) (Bpf
 		objects.TcxIngressPcaParse = newObjects.TcxIngressPcaParse
 		objects.TcpRcvFentry = newObjects.TCPRcvFentry
 		objects.TcpRcvKprobe = newObjects.TCPRcvKprobe
+		objects.OvsDpMonitor = nil
 		objects.KfreeSkb = nil
 	} else {
 		if err := spec.LoadAndAssign(&objects, nil); err != nil {
@@ -719,6 +744,7 @@ func NewPacketFetcher(cfg *FlowFetcherConfig) (*PacketFetcher, error) {
 	delete(spec.Programs, constTraceMessages)
 	delete(spec.Programs, constEnableDNSTracking)
 	delete(spec.Programs, constEnableFlowFiltering)
+	delete(spec.Programs, constEnableOvsMonitoring)
 
 	pcaEnable := 0
 	if cfg.EnablePCA {
