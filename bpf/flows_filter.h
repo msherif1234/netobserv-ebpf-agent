@@ -8,7 +8,7 @@
 #include "utils.h"
 
 // remove the comment below to enable debug prints
-//#define ENABLE_BPF_PRINTK
+#define ENABLE_BPF_PRINTK
 #ifdef ENABLE_BPF_PRINTK
 #define BPF_PRINTK(fmt, args...) bpf_printk(fmt, ##args)
 #else
