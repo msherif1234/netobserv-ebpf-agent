@@ -57,7 +57,6 @@ typedef __u64 u64;
 #define IPPROTO_ICMPV6 58
 #define DSCP_SHIFT 2
 #define DSCP_MASK 0x3F
-#define MIN_RTT 10000u //10us
 
 #define MAX_FILTER_ENTRIES 1 // we have only one global filter
 #define MAX_EVENT_MD 8
@@ -139,6 +138,18 @@ typedef struct flow_id_t {
 // Force emitting struct flow_id into the ELF.
 const struct flow_id_t *unused2 __attribute__((unused));
 
+// Standard 4 tuple, transport protocol and a sequence identifier.
+// No need to emit this struct. It's used only in kernel space
+typedef struct flow_seq_id_t {
+    u16 src_port;
+    u16 dst_port;
+    u8 src_ip[IP_MAX_LEN];
+    u8 dst_ip[IP_MAX_LEN];
+    u32 seq_id;
+    u8 transport_protocol;
+    u32 if_index; // OS interface index
+} __attribute__((packed)) flow_seq_id;
+
 // Flow record is a tuple containing both flow identifier and metrics. It is used to send
 // a complete flow via ring buffer when only when the accounting hashmap is full.
 // Contents in this struct must match byte-by-byte with Go's pkc/flow/Record struct
@@ -159,7 +170,8 @@ typedef struct pkt_info_t {
     u64 current_ts; // ts recorded when pkt came.
     u16 flags;      // TCP specific
     void *l4_hdr;   // Stores the actual l4 header
-    u8 dscp;        // IPv4/6 DSCP value
+    u64 rtt;
+    u8 dscp; // IPv4/6 DSCP value
     u16 dns_id;
     u16 dns_flags;
     u64 dns_latency;

@@ -45,11 +45,6 @@
 
 /* Do flow filtering. Is optional. */
 #include "flows_filter.h"
-/*
- * Defines an Network events monitoring tracker,
- * which runs inside flow_monitor. Is optional.
- */
-#include "network_events_monitoring.h"
 
 static inline int flow_monitor(struct __sk_buff *skb, u8 direction) {
     // If sampling is defined, will only parse 1 out of "sampling" flows
@@ -86,6 +81,12 @@ static inline int flow_monitor(struct __sk_buff *skb, u8 direction) {
     }
 
     int dns_errno = 0;
+    // We calculate the RTT before looking up aggregated_flows map because we want
+    // to keep the critical section between map lookup and update consume minimum time.
+    if (enable_rtt) {
+        // This is currently not to be enabled by default.
+        calculate_flow_rtt(&pkt, direction, data_end);
+    }
     if (enable_dns_tracking) {
         dns_errno = track_dns_packet(skb, &pkt);
     }
@@ -103,6 +104,10 @@ static inline int flow_monitor(struct __sk_buff *skb, u8 direction) {
         }
         aggregate_flow->flags |= pkt.flags;
         aggregate_flow->dscp = pkt.dscp;
+        // Does not matter the gate. Will be zero if not enabled.
+        if (pkt.rtt > aggregate_flow->flow_rtt) {
+            aggregate_flow->flow_rtt = pkt.rtt;
+        }
         aggregate_flow->dns_record.id = pkt.dns_id;
         aggregate_flow->dns_record.flags = pkt.dns_flags;
         aggregate_flow->dns_record.latency = pkt.dns_latency;
@@ -128,11 +133,6 @@ static inline int flow_monitor(struct __sk_buff *skb, u8 direction) {
             __sync_fetch_and_add(error_counter_p, 1);
         }
     } else {
-        // Key does not exist in the map, and will need to create a new entry.
-        u64 rtt = 0;
-        if (enable_rtt && id.transport_protocol == IPPROTO_TCP) {
-            rtt = MIN_RTT;
-        }
         flow_metrics new_flow = {
             .packets = 1,
             .bytes = skb->len,
@@ -140,11 +140,11 @@ static inline int flow_monitor(struct __sk_buff *skb, u8 direction) {
             .end_mono_time_ts = pkt.current_ts,
             .flags = pkt.flags,
             .dscp = pkt.dscp,
+            .flow_rtt = pkt.rtt,
             .dns_record.id = pkt.dns_id,
             .dns_record.flags = pkt.dns_flags,
             .dns_record.latency = pkt.dns_latency,
             .dns_record.errno = dns_errno,
-            .flow_rtt = rtt,
         };
 
         // even if we know that the entry is new, another CPU might be concurrently inserting a flow
