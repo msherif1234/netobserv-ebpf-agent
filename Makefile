@@ -205,7 +205,7 @@ create-and-deploy-kind-cluster: prereqs ## Create a kind cluster and deploy the 
 
 .PHONY: destroy-kind-cluster
 destroy-kind-cluster: ## Destroy the kind cluster.
-	oc delete -f scripts/agent.yml
+	kubectl delete -f scripts/agent.yml
 	kind delete cluster
 
 ##@ Images
