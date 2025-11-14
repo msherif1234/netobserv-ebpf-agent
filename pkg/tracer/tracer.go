@@ -63,7 +63,7 @@ const (
 	networkEventsMonitoringHook         = "psample_sample_packet"
 	defaultNetworkEventsGroupID         = 10
 	constEnableIPsec                    = "enable_ipsec"
-	constEnableSSL                      = "enable_ssl"
+	constEnableOpenSSLTracking          = "enable_openssl_tracking"
 	sslDataEventMap                     = "ssl_data_event_map"
 )
 
@@ -119,7 +119,7 @@ type FlowFetcherConfig struct {
 	BpfManBpfFSPath                string
 	EnableIPsecTracker             bool
 	FilterConfig                   []*FilterConfig
-	EnableSSL                      bool
+	EnableOpenSSLTracking          bool
 	OpenSSLPath                    string
 }
 
@@ -202,7 +202,7 @@ func NewFlowFetcher(cfg *FlowFetcherConfig, m *metrics.Metrics) (*FlowFetcher, e
 		delete(spec.Programs, constPcaEnable)
 
 		// Minimize SSL maps if SSL is disabled
-		if !cfg.EnableSSL {
+		if !cfg.EnableOpenSSLTracking {
 			spec.Maps[sslDataEventMap].MaxEntries = 1
 		}
 
@@ -278,7 +278,7 @@ func NewFlowFetcher(cfg *FlowFetcherConfig, m *metrics.Metrics) (*FlowFetcher, e
 		}
 
 		// Setup SSL tracking if enabled
-		if cfg.EnableSSL {
+		if cfg.EnableOpenSSLTracking {
 			// Read SSL data events from ringbuf
 			sslDataEvents, err = ringbuf.NewReader(objects.BpfMaps.SslDataEventMap)
 			if err != nil {
@@ -1515,7 +1515,7 @@ func NewPacketFetcher(cfg *FlowFetcherConfig) (*PacketFetcher, error) {
 	delete(spec.Programs, constNetworkEventsMonitoringGroupID)
 	delete(spec.Programs, constEnablePktTranslation)
 	delete(spec.Programs, constEnableIPsec)
-	delete(spec.Programs, constEnableSSL)
+	delete(spec.Programs, constEnableOpenSSLTracking)
 
 	if err := spec.LoadAndAssign(&newObjects, &cilium.CollectionOptions{Maps: cilium.MapOptions{PinPath: ""}}); err != nil {
 		var ve *cilium.VerifierError
@@ -2006,9 +2006,9 @@ func configureFlowSpecVariables(spec *cilium.CollectionSpec, cfg *FlowFetcherCon
 		spec.Maps[ipsecOutputMap].MaxEntries = 1
 	}
 
-	enableSSL := 0
-	if cfg.EnableSSL {
-		enableSSL = 1
+	enableOpenSSLTracking := 0
+	if cfg.EnableOpenSSLTracking {
+		enableOpenSSLTracking = 1
 	}
 	// When adding constants here, remember to delete them in NewPacketFetcher
 	variables := []variablesMapping{
@@ -2023,7 +2023,7 @@ func configureFlowSpecVariables(spec *cilium.CollectionSpec, cfg *FlowFetcherCon
 		{constNetworkEventsMonitoringGroupID, uint8(networkEventsMonitoringGroupID)},
 		{constEnablePktTranslation, uint8(enablePktTranslation)},
 		{constEnableIPsec, uint8(enableIPsec)},
-		{constEnableSSL, uint8(enableSSL)},
+		{constEnableOpenSSLTracking, uint8(enableOpenSSLTracking)},
 	}
 
 	for _, mapping := range variables {

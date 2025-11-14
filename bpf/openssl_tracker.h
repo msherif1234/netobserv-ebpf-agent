@@ -30,7 +30,7 @@ static inline void generate_SSL_data_event(struct pt_regs *ctx, u64 pid_tgid, u8
 // https://github.com/openssl/openssl/blob/master/ssl/ssl_lib.c#L2666
 SEC("uprobe/SSL_write")
 int probe_entry_SSL_write(struct pt_regs *ctx) {
-    if (enable_ssl == 0) {
+    if (enable_openssl_tracking == 0) {
         return 0;
     }
 

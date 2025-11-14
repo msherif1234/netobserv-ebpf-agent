@@ -296,10 +296,10 @@ type BpfVariableSpecs struct {
 	EnableFlowsFiltering           *ebpf.VariableSpec `ebpf:"enable_flows_filtering"`
 	EnableIpsec                    *ebpf.VariableSpec `ebpf:"enable_ipsec"`
 	EnableNetworkEventsMonitoring  *ebpf.VariableSpec `ebpf:"enable_network_events_monitoring"`
+	EnableOpensslTracking          *ebpf.VariableSpec `ebpf:"enable_openssl_tracking"`
 	EnablePca                      *ebpf.VariableSpec `ebpf:"enable_pca"`
 	EnablePktTranslationTracking   *ebpf.VariableSpec `ebpf:"enable_pkt_translation_tracking"`
 	EnableRtt                      *ebpf.VariableSpec `ebpf:"enable_rtt"`
-	EnableSsl                      *ebpf.VariableSpec `ebpf:"enable_ssl"`
 	FilterKey                      *ebpf.VariableSpec `ebpf:"filter_key"`
 	FilterValue                    *ebpf.VariableSpec `ebpf:"filter_value"`
 	HasFilterSampling              *ebpf.VariableSpec `ebpf:"has_filter_sampling"`
@@ -369,10 +369,10 @@ type BpfVariables struct {
 	EnableFlowsFiltering           *ebpf.Variable `ebpf:"enable_flows_filtering"`
 	EnableIpsec                    *ebpf.Variable `ebpf:"enable_ipsec"`
 	EnableNetworkEventsMonitoring  *ebpf.Variable `ebpf:"enable_network_events_monitoring"`
+	EnableOpensslTracking          *ebpf.Variable `ebpf:"enable_openssl_tracking"`
 	EnablePca                      *ebpf.Variable `ebpf:"enable_pca"`
 	EnablePktTranslationTracking   *ebpf.Variable `ebpf:"enable_pkt_translation_tracking"`
 	EnableRtt                      *ebpf.Variable `ebpf:"enable_rtt"`
-	EnableSsl                      *ebpf.Variable `ebpf:"enable_ssl"`
 	FilterKey                      *ebpf.Variable `ebpf:"filter_key"`
 	FilterValue                    *ebpf.Variable `ebpf:"filter_value"`
 	HasFilterSampling              *ebpf.Variable `ebpf:"has_filter_sampling"`

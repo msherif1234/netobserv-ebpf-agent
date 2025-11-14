@@ -177,7 +177,7 @@ func FlowsAgent(cfg *config.Agent) (*Flows, error) {
 		BpfManBpfFSPath:                cfg.BpfManBpfFSPath,
 		EnableIPsecTracker:             cfg.EnableIPsecTracking,
 		FilterConfig:                   filterRules,
-		EnableSSL:                      cfg.EnableSSL,
+		EnableOpenSSLTracking:          cfg.EnableOpenSSLTracking,
 		OpenSSLPath:                    cfg.OpenSSLPath,
 	}
 
@@ -211,7 +211,7 @@ func flowsAgent(
 	mapTracer := flow.NewMapTracer(fetcher, cfg.CacheActiveTimeout, cfg.StaleEntriesEvictTimeout, m, s, cfg.EnableUDNMapping)
 	rbTracer := flow.NewRingBufTracer(fetcher, mapTracer, cfg.CacheActiveTimeout, m)
 	var rbSSLTracer *flow.RingBufTracer
-	if cfg.EnableSSL {
+	if cfg.EnableOpenSSLTracking {
 		rbSSLTracer = flow.NewSSLRingBufTracer(fetcher, mapTracer, cfg.CacheActiveTimeout, m)
 	}
 	accounter := flow.NewAccounter(cfg.CacheMaxFlows, cfg.CacheActiveTimeout, time.Now, monotime.Now, m, s, cfg.EnableUDNMapping)
@@ -402,7 +402,7 @@ func (f *Flows) buildAndStartPipeline(ctx context.Context) (*node.Terminal[[]*mo
 	mapTracer := node.AsStart(f.mapTracer.TraceLoop(ctx, f.cfg.ForceGC))
 	rbTracer := node.AsStart(f.rbTracer.TraceLoop(ctx))
 	var rbSSLTracer *node.Start[*model.RawRecord]
-	if f.cfg.EnableSSL {
+	if f.cfg.EnableOpenSSLTracking {
 		rbSSLTracer = node.AsStart(f.rbSSLTracer.TraceLoop(ctx))
 	}
 
