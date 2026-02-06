@@ -338,83 +338,116 @@ func NewFlowFetcher(cfg *FlowFetcherConfig, m *metrics.Metrics) (*FlowFetcher, e
 		if err != nil {
 			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
 		}
-		log.Info("BPFManager mode: loading aggregated flow DNS pinned maps")
-		mPath = path.Join(pinDir, aggregatedFlowsDNS)
-		objects.BpfMaps.AggregatedFlowsDns, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
-		}
-		log.Info("BPFManager mode: loading aggregated flow pkt drops pinned maps")
-		mPath = path.Join(pinDir, aggregatedFlowsPktDrop)
-		objects.BpfMaps.AggregatedFlowsPktDrop, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
-		}
-		log.Info("BPFManager mode: loading aggregated flow network events pinned maps")
-		mPath = path.Join(pinDir, aggregatedFlowsNetworkEvents)
-		objects.BpfMaps.AggregatedFlowsNetworkEvents, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
-		}
-		log.Info("BPFManager mode: loading aggregated flow translation pinned maps")
-		mPath = path.Join(pinDir, aggregatedFlowsXLat)
-		objects.BpfMaps.AggregatedFlowsXlat, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
-		}
+
 		log.Info("BPFManager mode: loading additional flow metrics pinned maps")
 		mPath = path.Join(pinDir, additionalFlowMetrics)
 		objects.BpfMaps.AdditionalFlowMetrics, err = cilium.LoadPinnedMap(mPath, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
 		}
+
 		log.Info("BPFManager mode: loading direct flows pinned maps")
 		mPath = path.Join(pinDir, directFlowsMap)
 		objects.BpfMaps.DirectFlows, err = cilium.LoadPinnedMap(mPath, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
 		}
-		log.Infof("BPFManager mode: loading DNS flows pinned maps")
-		mPath = path.Join(pinDir, dnsLatencyMap)
-		objects.BpfMaps.DnsFlows, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
-		}
-		log.Infof("BPFManager mode: loading filter pinned maps")
-		mPath = path.Join(pinDir, filterMap)
-		objects.BpfMaps.FilterMap, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
-		}
-		log.Infof("BPFManager mode: loading Peerfilter pinned maps")
-		mPath = path.Join(pinDir, peerFilterMap)
-		objects.BpfMaps.PeerFilterMap, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
-		}
+
 		log.Infof("BPFManager mode: loading global counters pinned maps")
 		mPath = path.Join(pinDir, globalCountersMap)
 		objects.BpfMaps.GlobalCounters, err = cilium.LoadPinnedMap(mPath, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
 		}
-		log.Infof("BPFManager mode: loading packet record pinned maps")
-		mPath = path.Join(pinDir, pcaRecordsMap)
-		objects.BpfMaps.PacketRecord, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+
+		if cfg.EnableDNSTracker {
+			log.Info("BPFManager mode: loading aggregated flow DNS pinned maps")
+			mPath = path.Join(pinDir, aggregatedFlowsDNS)
+			objects.BpfMaps.AggregatedFlowsDns, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
+			log.Infof("BPFManager mode: loading DNS flows pinned maps")
+			mPath = path.Join(pinDir, dnsLatencyMap)
+			objects.BpfMaps.DnsFlows, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
+			log.Infof("BPFManager mode: loading DNS name pinned maps")
+			mPath = path.Join(pinDir, dnsNameMap)
+			objects.BpfMaps.DnsNameMap, err = cilium.LoadPinnedMap(mPath, opts)
+			log.Infof("BPFManager mode: loading QUIC flows pinned maps")
+			mPath = path.Join(pinDir, quicFlowsMap)
+			objects.BpfMaps.QuicFlows, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
 		}
-		log.Infof("BPFManager mode: loading skb input pinned maps")
-		mPath = path.Join(pinDir, ipsecInputMap)
-		objects.BpfMaps.IpsecIngressMap, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+
+		if cfg.EnablePktDrops {
+			log.Info("BPFManager mode: loading aggregated flow pkt drops pinned maps")
+			mPath = path.Join(pinDir, aggregatedFlowsPktDrop)
+			objects.BpfMaps.AggregatedFlowsPktDrop, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
 		}
-		log.Infof("BPFManager mode: loading skb output pinned maps")
-		mPath = path.Join(pinDir, ipsecOutputMap)
-		objects.BpfMaps.IpsecEgressMap, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+
+		if cfg.EnableNetworkEventsMonitoring {
+			log.Info("BPFManager mode: loading aggregated flow network events pinned maps")
+			mPath = path.Join(pinDir, aggregatedFlowsNetworkEvents)
+			objects.BpfMaps.AggregatedFlowsNetworkEvents, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
+		}
+
+		if cfg.EnablePktTranslation {
+			log.Info("BPFManager mode: loading aggregated flow translation pinned maps")
+			mPath = path.Join(pinDir, aggregatedFlowsXLat)
+			objects.BpfMaps.AggregatedFlowsXlat, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
+		}
+
+		if filter != nil {
+			log.Infof("BPFManager mode: loading filter pinned maps")
+			mPath = path.Join(pinDir, filterMap)
+			objects.BpfMaps.FilterMap, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
+			log.Infof("BPFManager mode: loading Peerfilter pinned maps")
+			mPath = path.Join(pinDir, peerFilterMap)
+			objects.BpfMaps.PeerFilterMap, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
+		}
+
+		if cfg.EnablePCA {
+			log.Infof("BPFManager mode: loading packet record pinned maps")
+			mPath = path.Join(pinDir, pcaRecordsMap)
+			objects.BpfMaps.PacketRecord, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
+		}
+
+		if cfg.EnableIPsecTracker {
+			log.Infof("BPFManager mode: loading skb input pinned maps")
+			mPath = path.Join(pinDir, ipsecInputMap)
+			objects.BpfMaps.IpsecIngressMap, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
+			log.Infof("BPFManager mode: loading skb output pinned maps")
+			mPath = path.Join(pinDir, ipsecOutputMap)
+			objects.BpfMaps.IpsecEgressMap, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
 		}
 
 		// Only load SSL map if OpenSSL tracking is enabled
@@ -433,14 +466,13 @@ func NewFlowFetcher(cfg *FlowFetcherConfig, m *metrics.Metrics) (*FlowFetcher, e
 			}
 		}
 
-		log.Infof("BPFManager mode: loading DNS name pinned maps")
-		mPath = path.Join(pinDir, dnsNameMap)
-		objects.BpfMaps.DnsNameMap, err = cilium.LoadPinnedMap(mPath, opts)
-		log.Infof("BPFManager mode: loading QUIC flows pinned maps")
-		mPath = path.Join(pinDir, quicFlowsMap)
-		objects.BpfMaps.QuicFlows, err = cilium.LoadPinnedMap(mPath, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+		if cfg.QUICTrackingMode != 0 {
+			log.Infof("BPFManager mode: loading QUIC flows pinned maps")
+			mPath = path.Join(pinDir, quicFlowsMap)
+			objects.BpfMaps.QuicFlows, err = cilium.LoadPinnedMap(mPath, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load %s: %w", mPath, err)
+			}
 		}
 	}
 
